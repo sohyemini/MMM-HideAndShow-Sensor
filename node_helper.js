@@ -12,6 +12,7 @@ const NodeHelper = require('node_helper');
 module.exports = NodeHelper.create({	
     start: function () 
     {
+	    console.log('MMM-HASS : start node_helper ');
 	    this.started = false;
     }, // end of start function
 
@@ -26,7 +27,7 @@ module.exports = NodeHelper.create({
 		    // GPIO로 부터 값 읽기
 		    this.pir.watch(function (err, value) 
         	   {
-			    console.log('watch : value ' + value);
+			    console.log('MMM-HASS / watch : value ' + value);
 			    // 읽은 값이 있으면
 			    if(value)
 			    {
