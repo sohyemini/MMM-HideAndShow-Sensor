@@ -12,7 +12,7 @@ Module.register('MMM-HideAndShow-Sensor', {
 	},
 
 	socketNotificationReceived: function (notification, payload) {
-		if (notification === 'MOTHION_DETECTED') {
+		if (notification === 'SHOW_ALERT') {
 			this.sendNotification(notification, payload);
 		}
 	},
