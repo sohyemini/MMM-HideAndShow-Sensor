@@ -31,8 +31,8 @@ module.exports = NodeHelper.create({
 			    // 읽은 값이 있으면
 			    if(value)
 			    {
-				    //Notification 생성
-				    self.sendSocketNotification('MOTION_DETECTED', 
+				    //Notification 생성, SHOW_ALERT을 통해서 화면에 Toast 출력
+				    self.sendSocketNotification('SHOW_ALERT', 
 				    {
 					    title: 'PIR',
 					    message: 'Motion detected!',
