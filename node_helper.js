@@ -28,18 +28,15 @@ module.exports = NodeHelper.create({
 	    this.mode = "off";
 		
 	    var x = setInterval(function(){
-		console.log('MMM-HASS : config.iMotion = config.iMotion - 1 / iMotion = ' + config.iMotion);
 		config.iMotion = config.iMotion - 1;
 		if (config.iMotion === 0)
 		    self.sendSocketNotification("HIDE_MODULES",{});
 	    }, 1000);
 	    
-	    console.log('MMM-HASS : start node_helper ');
 	    this.started = false;
     }, // end of start function
 
     setupListener: function() {
-	    console.log("MMM-HASS / -----------------------------setupListener-->");
 	    this.trigger = new Gpio(this.config.triggerPin, "out");
 	    this.echo = new Gpio(this.config.echoPin, "in", "both");
 	    this.startTick = { ticks: [0, 0] };
@@ -48,21 +45,18 @@ module.exports = NodeHelper.create({
     },
     
     startListener: function() {
-	    console.log("MMM-HASS / -----------------------------startListener-->");
 	    this.echo.watch(this.measureCb);
 	    this.mode = "measuring";
 	    this.sampleInterval = setInterval(this.doTrigger.bind(this), this.config.measuringInterval);
     },
     
     stopListener: function() {
-	    console.log("MMM-HASS / -----------------------------stopListener-->");
 	    this.echo.unwatch(this.measureCb);
 	    this.mode = "off";
 	    clearInterval(this.sampleInterval);
     },
     
     doTrigger: function() {
-	    console.log("MMM-HASS / -----------------------------doTrigger-->");
 	    // Set trigger high for 10 microseconds
 	    this.trigger.writeSync(1);
 	    usleep(this._config.TRIGGER_PULSE_TIME);
@@ -70,6 +64,7 @@ module.exports = NodeHelper.create({
     },
     
     measure: function(err, value) {
+	    var self = this;
 	    var diff, usDiff, dist;
 	    if (err) {
 		throw err;
@@ -83,32 +78,25 @@ module.exports = NodeHelper.create({
 		diff = process.hrtime(this.startTick["ticks"]);
 		// Full conversion of hrtime to us => [0]*1000000 + [1]/1000
 		usDiff = diff[0] * 1000000 + diff[1] / 1000;
-		console.log("MMM-HASS / -------------------------------usDiff.-->" + usDiff);
 
-//		if (this.mode !== "detect" &&  usDiff > this.config.sensorTimeout) { // Ignore bad measurements
-		if (usDiff > this.config.sensorTimeout) { // Ignore bad measurements
-		    console.log("MMM-HASS / -----------------------------77---------------masure.-->");
+		if (usDiff > this.config.sensorTimeout)  // Ignore bad measurements
 		    return;
-		}
-
 
 		dist = usDiff / 2 / this._config.MICROSECONDS_PER_CM;
 
 		this.lastDistance["distance"] = dist.toFixed(2);
-		console.log("MMM-HASS / ------------------------------------distance .......-->" + dist.toFixed(2));
 		
-		if (this.config.calibrate) {
-		    console.log("MMM-HASS / ------------------------------------" + this.lastDistance["distance"] + "  calibration .......-->" + dist.toFixed(2));
-		    this.sendSocketNotification('CALIBRATION', this.lastDistance["distance"]);
+		if(dist.toFixed(2) < 70) // 거울
+		{
+		    self.sendSocketNotification("SHOW_MIRROR",{});
+		} 
+		else
+		{
+		    self.sendSocketNotification("HIDE_MIRROR",{});
 		}
-
-		if (this.mode === "measuring") {
-		    console.log("MMM-HASS / ------------------------------------" + this.lastDistance["distance"] + "  measuring .......-->" + dist.toFixed(2));
-		    this.sendSocketNotification('MEASUREMENT', this.lastDistance["distance"]);
-		}
+		
+		console.log("MMM-HASS / distance to object = " + this.lastDistance["distance"] + "cm");
 	    }
-	    
-	    
     },
 
     socketNotificationReceived: function (notification, payload) 
