@@ -10,7 +10,7 @@ Module.register('MMM-HideAndShow-Sensor', {
 		echoPin: 24,
 		triggerPin: 18,
 		distance: 70, // <70 cm will show compliments for given delay
-		sensorTimeout: 7500,
+		sensorTimeout: 10000,
 		animationSpeed: 100,
 		measuringInterval: 500, // in milliseconds
 		delay: 30, // 30 seconds compliments will be shown
@@ -33,12 +33,14 @@ Module.register('MMM-HideAndShow-Sensor', {
 	},
 
 	socketNotificationReceived: function (notification, payload) {
-//		console.log('MMM-HASS / C<-------------------------------------------');
 		if (notification === 'SHOW_ALERT') {
 			this.sendNotification(notification, payload);
 		} 
 		
-		if (notification === "HIDE_MODULES" && !config.bMirror) {
+		 Log.log("[SoHyeMin] notification = " + notification + "   payload = " + payload);
+		// 전체 끔, 거울모드는 아님
+		if (notification === "HIDE_MODULES"){// && !config.bMirror) {
+			console.log("+++++++++++++++++++++++++++++++turn off the screen");
 			config.bShow = false;
 			MM.getModules().withClass(['newsfeed', 
                                       'weatherforecast', 
@@ -56,7 +58,9 @@ Module.register('MMM-HideAndShow-Sensor', {
 		    this.sendNotification(notification, payload);
 		}
 		
-		if (notification === "SHOW_MODULES" && !config.bMirror) {
+		// 포토 앨범, 거울모드 아님
+		if (notification === "SHOW_MODULES"){// && !config.bMirror) {
+			console.log("+++++++++++++++++++++++++++++++show google photo and hide others");
 			config.bShow = true;
 			MM.getModules().withClass(['newsfeed', 
                                       'weatherforecast', 
@@ -66,15 +70,33 @@ Module.register('MMM-HideAndShow-Sensor', {
 									  'calendar',
 									  'clock',
 									  //'MMM-BackgroundSlideshow',
-									  'MMM-GooglePhotos',
+									  //'MMM-GooglePhotos',
 									  'currentweather'])
+                                .enumerate(function(module){
+                                    module.hide();
+                                });
+                                
+			MM.getModules().withClass([//'newsfeed', 
+                                      //'weatherforecast', 
+									  //'MMM-AirQuality',
+									  //'currentweather',
+									  //'MMM-GmailFeed',
+									  //'calendar',
+									  //'clock',
+									  //'MMM-BackgroundSlideshow',
+									  'MMM-GooglePhotos',
+									  //'currentweather'
+									  ])
                                 .enumerate(function(module){
                                     module.show();
                                 });
+                                
 		    this.sendNotification(notification, payload);
 		}	
 		
-		if (notification === "SHOW_MIRROR" && config.bShow) {
+		// 거울모드, 구글포토 빼고 다 보여줌
+		if (notification === "SHOW_MIRROR"){// && config.bShow) {
+			console.log("+++++++++++++++++++++++++++++++show all and hide google photo");
 			config.bSMirror = true;
 			MM.getModules().withClass(['newsfeed', 
                                       'weatherforecast', 
@@ -106,7 +128,9 @@ Module.register('MMM-HideAndShow-Sensor', {
 		    this.sendNotification(notification, payload);
 		}
 		
-		if (notification === "HIDE_MIRROR" && config.bShow) {
+		//구글포토만 보여줌
+		if (notification === "HIDE_MIRROR"){// && config.bShow) {
+			console.log("+++++++++++++++++++++++++++++++Hide all except google photo");
 			config.bMirror = false;
 			MM.getModules().withClass([//'newsfeed', 
                                       //'weatherforecast', 

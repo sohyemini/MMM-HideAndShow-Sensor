@@ -66,6 +66,7 @@ module.exports = NodeHelper.create({
     measure: function(err, value) {
 	    var self = this;
 	    var diff, usDiff, dist;
+	    var average = 0;
 	    if (err) {
 		throw err;
 	    }
@@ -78,24 +79,21 @@ module.exports = NodeHelper.create({
 		diff = process.hrtime(this.startTick["ticks"]);
 		// Full conversion of hrtime to us => [0]*1000000 + [1]/1000
 		usDiff = diff[0] * 1000000 + diff[1] / 1000;
-
 		if (usDiff > this.config.sensorTimeout)  // Ignore bad measurements
 		    return;
 
 		dist = usDiff / 2 / this._config.MICROSECONDS_PER_CM;
-
-		this.lastDistance["distance"] = dist.toFixed(2);
 		
-		if(dist.toFixed(2) < 70) // 거울
-		{
-		    self.sendSocketNotification("SHOW_MIRROR",{});
-		} 
-		else
-		{
-		    self.sendSocketNotification("HIDE_MIRROR",{});
+		this.lastDistance["distance"] = dist.toFixed(2);
+				
+		if (this.config.calibrate) {
+			if(dist.toFixed(2) < 100 ) // 거울
+			    self.sendSocketNotification("SHOW_MIRROR",dist.toFixed(2));//{});
+			else // 일반
+			    self.sendSocketNotification("HIDE_MIRROR",dist.toFixed(2));//{});
 		}
 		
-		console.log("MMM-HASS / distance to object = " + this.lastDistance["distance"] + "cm");
+		console.log("MMM-HASS / distance to object = " + dist.toFixed(2) + "cm");
 	    }
     },
 
@@ -120,7 +118,6 @@ module.exports = NodeHelper.create({
 	    {
 		    const self = this;
 		    this.config = payload;
-		    console.log('MMM-HASS / socketNotificationReceived, CONFIG, this.started.......');
 		    // GPIO의 Pin 지정
 		    this.pir = new Gpio(this.config.pin, 'in', 'both');
 		    // GPIO로 부터 값 읽기
@@ -137,9 +134,8 @@ module.exports = NodeHelper.create({
 					    message: 'Motion detected!',
 					    timer: 1000
 				    }); // end of sendSocketNotification
-				   */ console.log('MMM-HASS / PIR 이벤트 받음 iMotion = ' + config.iMotion);
-				    config.iMotion = 12;//600;
-				    config.bShow = true;
+				   */ 
+				    console.log('MMM-HASS / PIR 이벤트 받음 iMotion = ' + config.iMotion);
 				    self.sendSocketNotification("SHOW_MODULES",{});
 			    } // end of if
 		    }); // end of watch
