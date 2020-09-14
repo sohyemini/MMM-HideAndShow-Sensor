@@ -4,8 +4,9 @@
 /*                            Sept 10, 2020                     */
 /*                     Written by Sohyemini                     */
 /****************************************************************/
+'use strict';
 
-Module.register('MMM-HideAndShow-Sensor', {
+Module.register("MMM-HideAndShow-Sensor", {
 	defaults : {
 		echoPin: 24,
 		triggerPin: 18,
@@ -19,11 +20,15 @@ Module.register('MMM-HideAndShow-Sensor', {
 		verbose: false,
 		calibrate: true,
        	autoStart: true,
+       	iMotionTime: 30,
+       	currentMode : "SHOW_PHOTO",
 	},
 	
 	start: function () {	
 		var self = this;
-		this.loaded = false;			
+		this.loaded = false;	
+		this.config.bTurnOn = true;
+		this.config.bMirror = false;		
 		if(self.config.echoPin <= 27 && self.config.triggerPin <= 27) {
 			//send config to node_helper
 			this.sendSocketNotification('CONFIG', this.config);
@@ -33,15 +38,17 @@ Module.register('MMM-HideAndShow-Sensor', {
 	},
 
 	socketNotificationReceived: function (notification, payload) {
+		
 		if (notification === 'SHOW_ALERT') {
 			this.sendNotification(notification, payload);
 		} 
-		
-		 Log.log("[SoHyeMin] notification = " + notification + "   payload = " + payload);
-		// 전체 끔, 거울모드는 아님
-		if (notification === "HIDE_MODULES"){// && !config.bMirror) {
-			console.log("+++++++++++++++++++++++++++++++turn off the screen");
-			config.bShow = false;
+
+		// 전체 끔
+		if (notification === 'HIDE_ALL' && config.currentMode != "HIDE_ALL" ){
+			console.log("+++++++++++++++++++++++++++++++turn off");
+			config.bTurnOn = false;
+			config.bMirror = false;
+			config.iMotion = config.iMotionTime;
 			MM.getModules().withClass(['newsfeed', 
                                       'weatherforecast', 
 									  'MMM-AirQuality',
@@ -49,19 +56,30 @@ Module.register('MMM-HideAndShow-Sensor', {
 									  'MMM-GmailFeed',
 									  'calendar',
 									  'clock',
-									  //'MMM-BackgroundSlideshow',
-									  'MMM-GooglePhotos',
+									  'MMM-BackgroundSlideshow',
 									  'currentweather'])
                                 .enumerate(function(module){
                                     module.hide();
                                 });
+            config.currentMode = "HIDE_ALL";                    
 		    this.sendNotification(notification, payload);
 		}
 		
-		// 포토 앨범, 거울모드 아님
-		if (notification === "SHOW_MODULES"){// && !config.bMirror) {
-			console.log("+++++++++++++++++++++++++++++++show google photo and hide others");
-			config.bShow = true;
+		// 포토 앨범
+		if (notification === "SHOW_PHOTO" && config.currentMode != "SHOW_PHOTO" ){
+			
+			console.log("+++++++++++++++++++++++++++++++show google photo and hide others(SHOW_PHOTO)");
+			config.bTurnOn = true;
+			config.bMirror = false;
+			config.iMotion = config.iMotionTime;
+			console.log("+++++++++++++++++++++++++++++++show google photo and hide others(SHOW_PHOTO)-----startedS1 = " + config.startedS1 );
+		//	if(config.startedS1){
+				config.startedS1 = false;
+				this.start();
+		//	}
+			config.currentMode = "SHOW_PHOTO"; 
+
+			
 			MM.getModules().withClass(['newsfeed', 
                                       'weatherforecast', 
 									  'MMM-AirQuality',
@@ -83,8 +101,8 @@ Module.register('MMM-HideAndShow-Sensor', {
 									  //'MMM-GmailFeed',
 									  //'calendar',
 									  //'clock',
-									  //'MMM-BackgroundSlideshow',
-									  'MMM-GooglePhotos',
+									  'MMM-BackgroundSlideshow',
+									  //'MMM-GooglePhotos',
 									  //'currentweather'
 									  ])
                                 .enumerate(function(module){
@@ -95,9 +113,11 @@ Module.register('MMM-HideAndShow-Sensor', {
 		}	
 		
 		// 거울모드, 구글포토 빼고 다 보여줌
-		if (notification === "SHOW_MIRROR"){// && config.bShow) {
+		if (notification === "SHOW_MIRROR" && config.currentMode != "SHOW_MIRROR"){
 			console.log("+++++++++++++++++++++++++++++++show all and hide google photo");
-			config.bSMirror = true;
+			config.bMirror = true;
+			config.bTurnOn = true;
+			config.iMotion = config.iMotionTime;
 			MM.getModules().withClass(['newsfeed', 
                                       'weatherforecast', 
 									  'MMM-AirQuality',
@@ -118,51 +138,18 @@ Module.register('MMM-HideAndShow-Sensor', {
 									  //'MMM-GmailFeed',
 									  //'calendar',
 									  //'clock',
-									  //'MMM-BackgroundSlideshow',
-									  'MMM-GooglePhotos',
-									  //'currentweather'
-									  ])
-                                .enumerate(function(module){
-                                    module.hide();
-                                });                    
-		    this.sendNotification(notification, payload);
-		}
-		
-		//구글포토만 보여줌
-		if (notification === "HIDE_MIRROR"){// && config.bShow) {
-			console.log("+++++++++++++++++++++++++++++++Hide all except google photo");
-			config.bMirror = false;
-			MM.getModules().withClass([//'newsfeed', 
-                                      //'weatherforecast', 
-									  //'MMM-AirQuality',
-									  //'currentweather',
-									  //'MMM-GmailFeed',
-									  //'calendar',
-									  //'clock',
-									  //'MMM-BackgroundSlideshow',
-									  'MMM-GooglePhotos',
-									  //'currentweather'
-									  ])
-                                .enumerate(function(module){
-                                    module.show();
-                                });
-            MM.getModules().withClass(['newsfeed', 
-                                      'weatherforecast', 
-									  'MMM-AirQuality',
-									  'currentweather',
-									  'MMM-GmailFeed',
-									  'calendar',
-									  'clock',
-									  //'MMM-BackgroundSlideshow',
+									  'MMM-BackgroundSlideshow',
 									  //'MMM-GooglePhotos',
-									  'currentweather'
+									  //'currentweather'
 									  ])
                                 .enumerate(function(module){
                                     module.hide();
                                 });                    
+            config.currentMode = "SHOW_MIRROR"
 		    this.sendNotification(notification, payload);
 		}
-		
+
+
 		//autoStart Measuring if configured
 		if (notification === 'STARTED') 
 		{

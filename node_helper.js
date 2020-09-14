@@ -6,12 +6,13 @@
 /****************************************************************/
 'use strict';
 
+var NodeHelper = require("node_helper");
 //onoff 모듈의 GPIO를 얻어옵니다.
 const Gpio = require('onoff').Gpio;
-const NodeHelper = require('node_helper');
 let { usleep } = require('usleep');
-
-module.exports = NodeHelper.create({	
+var main_config = null;
+	
+module.exports = NodeHelper.create({    
     
     _config: {
 	    MICROSECONDS_PER_CM: 1e6 / 34321,
@@ -26,15 +27,34 @@ module.exports = NodeHelper.create({
 	    this.started = false;
 	    this.startedS1 = false;
 	    this.mode = "off";
-		
-	    var x = setInterval(function(){
-		config.iMotion = config.iMotion - 1;
-		if (config.iMotion === 0)
-		    self.sendSocketNotification("HIDE_MODULES",{});
+	    
+	    console.log('MMM-HASS -----> start function started in node_helper');
+
+	    var x = setInterval(()=>{
+		console.log('MMM-HASS -----> set interval');
+		if(main_config != null){
+		    main_config.iMotion = main_config.iMotion - 1;
+		    console.log('MMM-HASS -----> config.iMotion =' + main_config.iMotion);
+		    if (main_config.iMotion <= 0)
+		    {
+			if(main_config.currentMode != "HIDE_ALL")
+			{
+			    main_config.currentMode = "HIDE_ALL";
+			    this.stopListener();
+			    this.sendSocketNotification("HIDE_ALL",{});
+			    //main_config.bTurnOn = false;
+			    console.log('MMM-HASS -----> send HIDE_ALL notification');
+			}
+		    }
+		}
 	    }, 1000);
 	    
 	    this.started = false;
     }, // end of start function
+    
+    hideModuels: function() {
+
+    },
 
     setupListener: function() {
 	    this.trigger = new Gpio(this.config.triggerPin, "out");
@@ -86,14 +106,19 @@ module.exports = NodeHelper.create({
 		
 		this.lastDistance["distance"] = dist.toFixed(2);
 				
-		if (this.config.calibrate) {
-			if(dist.toFixed(2) < 100 ) // 거울
+		if (this.config.calibrate && this.config.bTurnOn) {
+			if(dist.toFixed(2) < 100 )//&& !this.config.bMirror && self.config.currentMode != "SHOW_MIRROR") // 거울
+			{
 			    self.sendSocketNotification("SHOW_MIRROR",dist.toFixed(2));//{});
-			else // 일반
-			    self.sendSocketNotification("HIDE_MIRROR",dist.toFixed(2));//{});
-		}
-		
-		console.log("MMM-HASS / distance to object = " + dist.toFixed(2) + "cm");
+			    console.log("MMM-HASS / ===================== SHOW_MIRROR");
+			}
+			else //if(self.config.currentMode != "SHOW_PHOTO" && this.config.bMirror)
+			{
+			    self.sendSocketNotification("SHOW_PHOTO",dist.toFixed(2));//{});
+			    console.log("MMM-HASS / ===================== SHOW_PHOTO  222222" + dist.toFixed(2) + "xxxx" + this.config.bMirror);
+			}
+		} else 
+		    console.log("MMM-HASS / ==============>" + this.config.bTurnOn + "yyyyyyy" + dist.toFixed(2) + "xxxx" + this.config.bMirror);
 	    }
     },
 
@@ -104,14 +129,19 @@ module.exports = NodeHelper.create({
 	    if (notification === 'CONFIG') {
 		if (!this.startedS1) {
 		    this.config = payload;
+		    main_config = payload;
+		    console.log('MMM-HASS / get config.iMotion = ' + this.config.iMotion);
 		    this.setupListener();
 		    this.startedS1 = true;
+		    
 		}
 		this.sendSocketNotification("STARTED", null);
 	    } else if (notification === 'ACTIVATE_MEASURING' && payload === true) {
 		this.startListener();
 	    } else if (notification === 'ACTIVATE_MEASURING' && payload === false) {
 		this.stopListener();
+	    } else if(notification == 'PRE_CONFIG') {
+		this.startedS1 = false;
 	    }
 	    
 	    if (notification === 'CONFIG' && this.started == false) 
@@ -125,18 +155,11 @@ module.exports = NodeHelper.create({
         	   {
 			    console.log('MMM-HASS / watch : value ' + value);
 			    // 읽은 값이 있으면
-			    if(value)
-			    {
-				    //Notification 생성, SHOW_ALERT을 통해서 화면에 Toast 출력
-				  /*  self.sendSocketNotification('SHOW_ALERT', 
-				    {
-					    title: 'PIR',
-					    message: 'Motion detected!',
-					    timer: 1000
-				    }); // end of sendSocketNotification
-				   */ 
-				    console.log('MMM-HASS / PIR 이벤트 받음 iMotion = ' + config.iMotion);
-				    self.sendSocketNotification("SHOW_MODULES",{});
+			    if(value && main_config.currentMode != "SHOW_PHOTO")
+			    { 
+				    console.log('MMM-HASS / PIR 이벤트 받음 iMotion = ' + main_config.iMotion);
+				    self.sendSocketNotification('SHOW_PHOTO',{});
+				    main_config.iMotion = main_config.iMotionTime;
 			    } // end of if
 		    }); // end of watch
 		    this.started = true;
