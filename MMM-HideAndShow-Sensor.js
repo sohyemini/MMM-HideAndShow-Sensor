@@ -21,33 +21,24 @@ Module.register("MMM-HideAndShow-Sensor", {
 		calibrate: true,
        	autoStart: true,
        	iMotionTime: 30,
-       	currentMode : "SHOW_PHOTO",
+       	currentMode : "STARTED",
 	},
 	
 	start: function () {	
 		var self = this;
 		this.loaded = false;	
-		this.config.bTurnOn = true;
-		this.config.bMirror = false;		
-		if(self.config.echoPin <= 27 && self.config.triggerPin <= 27) {
-			//send config to node_helper
-			this.sendSocketNotification('CONFIG', this.config);
-		}
-
+		this.config.bTurnOn = true;	
+		this.config.started = false;	
+		console.log("+++++++++++++++++++++++++++++++HASS +++++ start");
 		this.sendSocketNotification('CONFIG', this.config);
 	},
 
 	socketNotificationReceived: function (notification, payload) {
-		
-		if (notification === 'SHOW_ALERT') {
-			this.sendNotification(notification, payload);
-		} 
 
 		// 전체 끔
 		if (notification === 'HIDE_ALL' && config.currentMode != "HIDE_ALL" ){
 			console.log("+++++++++++++++++++++++++++++++turn off");
 			config.bTurnOn = false;
-			config.bMirror = false;
 			config.iMotion = config.iMotionTime;
 			MM.getModules().withClass(['newsfeed', 
                                       'weatherforecast', 
@@ -62,21 +53,15 @@ Module.register("MMM-HideAndShow-Sensor", {
                                     module.hide();
                                 });
             config.currentMode = "HIDE_ALL";                    
-		    this.sendNotification(notification, payload);
 		}
 		
 		// 포토 앨범
 		if (notification === "SHOW_PHOTO" && config.currentMode != "SHOW_PHOTO" ){
 			
-			console.log("+++++++++++++++++++++++++++++++show google photo and hide others(SHOW_PHOTO)");
+			console.log("+++++++++++++++++++++++++++++++show photo");
 			config.bTurnOn = true;
-			config.bMirror = false;
 			config.iMotion = config.iMotionTime;
-			console.log("+++++++++++++++++++++++++++++++show google photo and hide others(SHOW_PHOTO)-----startedS1 = " + config.startedS1 );
-		//	if(config.startedS1){
-				config.startedS1 = false;
-				this.start();
-		//	}
+			config.startedS1 = false;
 			config.currentMode = "SHOW_PHOTO"; 
 
 			
@@ -94,28 +79,18 @@ Module.register("MMM-HideAndShow-Sensor", {
                                     module.hide();
                                 });
                                 
-			MM.getModules().withClass([//'newsfeed', 
-                                      //'weatherforecast', 
-									  //'MMM-AirQuality',
-									  //'currentweather',
-									  //'MMM-GmailFeed',
-									  //'calendar',
-									  //'clock',
+			MM.getModules().withClass([
 									  'MMM-BackgroundSlideshow',
 									  //'MMM-GooglePhotos',
-									  //'currentweather'
 									  ])
                                 .enumerate(function(module){
                                     module.show();
-                                });
-                                
-		    this.sendNotification(notification, payload);
+                                });                  
 		}	
 		
 		// 거울모드, 구글포토 빼고 다 보여줌
 		if (notification === "SHOW_MIRROR" && config.currentMode != "SHOW_MIRROR"){
 			console.log("+++++++++++++++++++++++++++++++show all and hide google photo");
-			config.bMirror = true;
 			config.bTurnOn = true;
 			config.iMotion = config.iMotionTime;
 			MM.getModules().withClass(['newsfeed', 
@@ -131,32 +106,20 @@ Module.register("MMM-HideAndShow-Sensor", {
                                 .enumerate(function(module){
                                     module.show();
                                 });
-            MM.getModules().withClass([//'newsfeed', 
-                                      //'weatherforecast', 
-									  //'MMM-AirQuality',
-									  //'currentweather',
-									  //'MMM-GmailFeed',
-									  //'calendar',
-									  //'clock',
+                                                   
+            MM.getModules().withClass([
 									  'MMM-BackgroundSlideshow',
-									  //'MMM-GooglePhotos',
-									  //'currentweather'
+									  //'MMM-GooglePhotos'
 									  ])
                                 .enumerate(function(module){
                                     module.hide();
                                 });                    
             config.currentMode = "SHOW_MIRROR"
-		    this.sendNotification(notification, payload);
 		}
 
 
 		//autoStart Measuring if configured
 		if (notification === 'STARTED') 
-		{
-		    if (this.config.autoStart && !this.config.usePIR) 
-		    {
 				this.sendSocketNotification("ACTIVATE_MEASURING", true);
-		    }
-		}
 	},	
 });

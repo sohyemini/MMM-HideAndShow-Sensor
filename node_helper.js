@@ -27,14 +27,11 @@ module.exports = NodeHelper.create({
 	    this.started = false;
 	    this.startedS1 = false;
 	    this.mode = "off";
-	    
-	    console.log('MMM-HASS -----> start function started in node_helper');
 
 	    var x = setInterval(()=>{
-		console.log('MMM-HASS -----> set interval');
 		if(main_config != null){
 		    main_config.iMotion = main_config.iMotion - 1;
-		    console.log('MMM-HASS -----> config.iMotion =' + main_config.iMotion);
+		    console.log("+++++++helper++++++++++++++++++++++++start --> cnt = " + main_config.iMotion);
 		    if (main_config.iMotion <= 0)
 		    {
 			if(main_config.currentMode != "HIDE_ALL")
@@ -42,8 +39,6 @@ module.exports = NodeHelper.create({
 			    main_config.currentMode = "HIDE_ALL";
 			    this.stopListener();
 			    this.sendSocketNotification("HIDE_ALL",{});
-			    //main_config.bTurnOn = false;
-			    console.log('MMM-HASS -----> send HIDE_ALL notification');
 			}
 		    }
 		}
@@ -52,11 +47,10 @@ module.exports = NodeHelper.create({
 	    this.started = false;
     }, // end of start function
     
-    hideModuels: function() {
-
-    },
+    hideModuels: function() {},
 
     setupListener: function() {
+	    console.log("+++++++helper++++++++++++++++++++++++setupListener");
 	    this.trigger = new Gpio(this.config.triggerPin, "out");
 	    this.echo = new Gpio(this.config.echoPin, "in", "both");
 	    this.startTick = { ticks: [0, 0] };
@@ -65,19 +59,20 @@ module.exports = NodeHelper.create({
     },
     
     startListener: function() {
+	    console.log("+++++++helper++++++++++++++++++++++++startlistener");
 	    this.echo.watch(this.measureCb);
 	    this.mode = "measuring";
 	    this.sampleInterval = setInterval(this.doTrigger.bind(this), this.config.measuringInterval);
     },
     
     stopListener: function() {
+	    console.log("+++++++helper++++++++++++++++++++++++stop");
 	    this.echo.unwatch(this.measureCb);
 	    this.mode = "off";
 	    clearInterval(this.sampleInterval);
     },
     
     doTrigger: function() {
-	    // Set trigger high for 10 microseconds
 	    this.trigger.writeSync(1);
 	    usleep(this._config.TRIGGER_PULSE_TIME);
 	    this.trigger.writeSync(0);
@@ -105,20 +100,14 @@ module.exports = NodeHelper.create({
 		dist = usDiff / 2 / this._config.MICROSECONDS_PER_CM;
 		
 		this.lastDistance["distance"] = dist.toFixed(2);
-				
+		
+		console.log("+++++++helper++++++++++++++++++++++++measure = " + dist.toFixed(2));		
 		if (this.config.calibrate && this.config.bTurnOn) {
-			if(dist.toFixed(2) < 100 )//&& !this.config.bMirror && self.config.currentMode != "SHOW_MIRROR") // 거울
-			{
-			    self.sendSocketNotification("SHOW_MIRROR",dist.toFixed(2));//{});
-			    console.log("MMM-HASS / ===================== SHOW_MIRROR");
-			}
-			else //if(self.config.currentMode != "SHOW_PHOTO" && this.config.bMirror)
-			{
-			    self.sendSocketNotification("SHOW_PHOTO",dist.toFixed(2));//{});
-			    console.log("MMM-HASS / ===================== SHOW_PHOTO  222222" + dist.toFixed(2) + "xxxx" + this.config.bMirror);
-			}
-		} else 
-		    console.log("MMM-HASS / ==============>" + this.config.bTurnOn + "yyyyyyy" + dist.toFixed(2) + "xxxx" + this.config.bMirror);
+			if(dist.toFixed(2) < 100 )
+			    self.sendSocketNotification("SHOW_MIRROR",dist.toFixed(2));
+			else
+			    self.sendSocketNotification("SHOW_PHOTO",dist.toFixed(2));
+		} 
 	    }
     },
 
@@ -130,7 +119,6 @@ module.exports = NodeHelper.create({
 		if (!this.startedS1) {
 		    this.config = payload;
 		    main_config = payload;
-		    console.log('MMM-HASS / get config.iMotion = ' + this.config.iMotion);
 		    this.setupListener();
 		    this.startedS1 = true;
 		    
@@ -140,9 +128,7 @@ module.exports = NodeHelper.create({
 		this.startListener();
 	    } else if (notification === 'ACTIVATE_MEASURING' && payload === false) {
 		this.stopListener();
-	    } else if(notification == 'PRE_CONFIG') {
-		this.startedS1 = false;
-	    }
+	    } 
 	    
 	    if (notification === 'CONFIG' && this.started == false) 
 	    {
@@ -151,16 +137,19 @@ module.exports = NodeHelper.create({
 		    // GPIO의 Pin 지정
 		    this.pir = new Gpio(this.config.pin, 'in', 'both');
 		    // GPIO로 부터 값 읽기
-		    this.pir.watch(function (err, value) 
+		    this.pir.watch((err, value) =>
         	   {
-			    console.log('MMM-HASS / watch : value ' + value);
-			    // 읽은 값이 있으면
-			    if(value && main_config.currentMode != "SHOW_PHOTO")
-			    { 
-				    console.log('MMM-HASS / PIR 이벤트 받음 iMotion = ' + main_config.iMotion);
-				    self.sendSocketNotification('SHOW_PHOTO',{});
-				    main_config.iMotion = main_config.iMotionTime;
-			    } // end of if
+		       main_config.iMotion = main_config.iMotionTime;
+			if(value && main_config.currentMode == "HIDE_ALL")
+			{ 
+				self.sendSocketNotification('SHOW_PHOTO',{});
+				this.setupListener();
+				this.startedS1 = true;
+				this.config = payload;
+				main_config = payload;
+				main_config.currentMode = "STARTED";
+				this.sendSocketNotification("STARTED", null);
+			} // end of if
 		    }); // end of watch
 		    this.started = true;
 	    } // end of if
