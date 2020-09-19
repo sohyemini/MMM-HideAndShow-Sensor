@@ -28,11 +28,12 @@ module.exports = NodeHelper.create({
 	    this.startedS1 = false;
 	    this.mode = "off";
 
+	    // 모션센서 
 	    var x = setInterval(()=>{
 		if(main_config != null){
-		    main_config.iMotion = main_config.iMotion - 1;
-		    console.log("+++++++helper++++++++++++++++++++++++start --> cnt = " + main_config.iMotion);
-		    if (main_config.iMotion <= 0)
+		    main_config.iSlideShowTime = main_config.iSlideShowTime - 1;
+		    console.log("+++++++helper++++++++++++++++++++++++start --> cnt = " + main_config.iSlideShowTime);
+		    if (main_config.iSlideShowTime <= 0)
 		    {
 			if(main_config.currentMode != "HIDE_ALL")
 			{
@@ -52,7 +53,10 @@ module.exports = NodeHelper.create({
     setupListener: function() {
 	    console.log("+++++++helper++++++++++++++++++++++++setupListener");
 	    this.trigger = new Gpio(this.config.triggerPin, "out");
-	    this.echo = new Gpio(this.config.echoPin, "in", "both");
+	    if(!this.switch_on)
+		this.echo = new Gpio(this.config.echoPin, "in", "both");
+
+		
 	    this.startTick = { ticks: [0, 0] };
 	    this.lastDistance = { distance: 0.0 };
 	    this.measureCb = this.measure.bind(this);
@@ -67,7 +71,8 @@ module.exports = NodeHelper.create({
     
     stopListener: function() {
 	    console.log("+++++++helper++++++++++++++++++++++++stop");
-	    this.echo.unwatch(this.measureCb);
+	    //if(!this.switch_on)
+		//this.echo.unwatch(this.measureCb);
 	    this.mode = "off";
 	    clearInterval(this.sampleInterval);
     },
@@ -114,12 +119,14 @@ module.exports = NodeHelper.create({
     socketNotificationReceived: function (notification, payload) 
     {
 	    var self = this;
-	    
-	    if (notification === 'CONFIG') {
+	    main_config = payload;
+	    if (notification === 'CONFIG_ULTRASONIC') {
 		if (!this.startedS1) {
 		    this.config = payload;
-		    main_config = payload;
-		    this.setupListener();
+		    //main_config = payload;
+		    console.log("YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY--> " + this.switch_on);
+		    if(!this.switch_on)
+			this.setupListener();
 		    this.startedS1 = true;
 		    
 		}
@@ -127,10 +134,11 @@ module.exports = NodeHelper.create({
 	    } else if (notification === 'ACTIVATE_MEASURING' && payload === true) {
 		this.startListener();
 	    } else if (notification === 'ACTIVATE_MEASURING' && payload === false) {
+		console.log("YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY--2> " + this.switch_on);
 		this.stopListener();
 	    } 
-	    
-	    if (notification === 'CONFIG' && this.started == false) 
+
+	    if (notification === 'CONFIG_ULTRASONIC' && this.started == false) 
 	    {
 		    const self = this;
 		    this.config = payload;
@@ -138,12 +146,13 @@ module.exports = NodeHelper.create({
 		    this.pir = new Gpio(this.config.pin, 'in', 'both');
 		    // GPIO로 부터 값 읽기
 		    this.pir.watch((err, value) =>
-        	   {
-		       main_config.iMotion = main_config.iMotionTime;
+		   {
+		       main_config.iSlideShowTime = main_config.iMotionTime;
 			if(value && main_config.currentMode == "HIDE_ALL")
 			{ 
 				self.sendSocketNotification('SHOW_PHOTO',{});
-				this.setupListener();
+				if(!this.switch_on)
+				    this.setupListener();
 				this.startedS1 = true;
 				this.config = payload;
 				main_config = payload;
@@ -153,6 +162,34 @@ module.exports = NodeHelper.create({
 		    }); // end of watch
 		    this.started = true;
 	    } // end of if
+	    else if(notification === 'CONFIG_SWITCH' && this.started == false && main_config.bswitch) 
+	    {
+		//const self = this;
+		this.config = payload;	  
+		let GPIO = require('onoff').Gpio;
+		console.log("MMM_HASS / switch-----------------config");
+		let button = new GPIO(this.config.echoPin, 'in', 'both',{ persistentWatch: true, debounceTimeout: this.config.clickDelay });
+		button.watch(function(err, state) {
+			// check the state of the button; 1 == pressed, 0 == not pressed
+			if(state == 1) {
+				// send notification for broadcast
+				//self.sendSocketNotification(self.config.notificationMessage, true);
+				if(self.config.switch_mode === "SLIDESHOW")
+				{
+				    console.log("MMM_HASS / switch-----------------config-------------mirror");
+				    self.config.switch_mode = "MIRROR";
+				    self.sendSocketNotification("SHOW_MIRROR",{});
+				}
+				else
+				{
+				    self.config.switch_mode = "SLIDESHOW";
+				    self.sendSocketNotification('SHOW_PHOTO',{});
+				    console.log("MMM_HASS / switch-----------------config-------------slideshow");
+				}
+			}
+		});          
+		this.started = true;
+	    }
     }, // end of function
 	
 }); // end of NodeHelper.create

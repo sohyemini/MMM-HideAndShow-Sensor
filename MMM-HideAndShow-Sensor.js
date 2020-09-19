@@ -20,8 +20,13 @@ Module.register("MMM-HideAndShow-Sensor", {
 		verbose: false,
 		calibrate: true,
        	autoStart: true,
-       	iMotionTime: 30,
+       	iMotionTime: 60*5,
        	currentMode : "STARTED",
+       	clickDelay: 500,
+    	bMirror: false,  
+   		bTurnOn: true, 	 	
+   		bswitch: true,
+   		switch_mode: "SLIDESHOW",
 	},
 	
 	start: function () {	
@@ -29,8 +34,21 @@ Module.register("MMM-HideAndShow-Sensor", {
 		this.loaded = false;	
 		this.config.bTurnOn = true;	
 		this.config.started = false;	
-		console.log("+++++++++++++++++++++++++++++++HASS +++++ start");
-		this.sendSocketNotification('CONFIG', this.config);
+		this.config.iMotionTime = this.config.iSlideShowTime;
+		this.config.bswitch = this.config.switch_on;
+
+		// switch_on이 true이면 스위치를 사용하고 초음파 센서를 사용하지 않으므로
+		// 둘 중에 하나만 실행이 되도록 notification을 node helper로 보냄
+		if(this.config.switch_on)
+		{
+			this.sendSocketNotification('CONFIG_SWITCH', this.config);
+			console.log("스위치 사용할꺼야");
+		}
+		else
+		{
+			this.sendSocketNotification('CONFIG_ULTRASONIC', this.config);
+			console.log("초음파 센서 사용할꺼야");
+		}
 	},
 
 	socketNotificationReceived: function (notification, payload) {
@@ -50,7 +68,7 @@ Module.register("MMM-HideAndShow-Sensor", {
 									  'MMM-BackgroundSlideshow',
 									  'currentweather'])
                                 .enumerate(function(module){
-                                    module.hide();
+                                    module.hide(1000);
                                 });
             config.currentMode = "HIDE_ALL";                    
 		}
@@ -76,7 +94,7 @@ Module.register("MMM-HideAndShow-Sensor", {
 									  //'MMM-GooglePhotos',
 									  'currentweather'])
                                 .enumerate(function(module){
-                                    module.hide();
+                                    module.hide(1000);
                                 });
                                 
 			MM.getModules().withClass([
@@ -84,7 +102,7 @@ Module.register("MMM-HideAndShow-Sensor", {
 									  //'MMM-GooglePhotos',
 									  ])
                                 .enumerate(function(module){
-                                    module.show();
+                                    module.show(1000);
                                 });                  
 		}	
 		
@@ -104,7 +122,7 @@ Module.register("MMM-HideAndShow-Sensor", {
 									  //'MMM-GooglePhotos',
 									  'currentweather'])
                                 .enumerate(function(module){
-                                    module.show();
+                                    module.show(1000);
                                 });
                                                    
             MM.getModules().withClass([
@@ -112,7 +130,7 @@ Module.register("MMM-HideAndShow-Sensor", {
 									  //'MMM-GooglePhotos'
 									  ])
                                 .enumerate(function(module){
-                                    module.hide();
+                                    module.hide(1000);
                                 });                    
             config.currentMode = "SHOW_MIRROR"
 		}
