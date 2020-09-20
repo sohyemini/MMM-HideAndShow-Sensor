@@ -20,7 +20,8 @@ Module.register("MMM-HideAndShow-Sensor", {
 		verbose: false,
 		calibrate: true,
        	autoStart: true,
-       	iMotionTime: 60*5,
+       	iSlideShowTime: 60*5,
+       	localSlideShowTime: 60*5,
        	currentMode : "STARTED",
        	clickDelay: 500,
     	bMirror: false,  
@@ -34,9 +35,12 @@ Module.register("MMM-HideAndShow-Sensor", {
 		this.loaded = false;	
 		this.config.bTurnOn = true;	
 		this.config.started = false;	
-		this.config.iMotionTime = this.config.iSlideShowTime;
+		this.started_switch = false;
+		this.config.localSlideShowTime = this.config.iSlideShowTime;
 		this.config.bswitch = this.config.switch_on;
 
+		this.sendSocketNotification('CONFIG', this.config);
+		
 		// switch_on이 true이면 스위치를 사용하고 초음파 센서를 사용하지 않으므로
 		// 둘 중에 하나만 실행이 되도록 notification을 node helper로 보냄
 		if(this.config.switch_on)
@@ -49,6 +53,7 @@ Module.register("MMM-HideAndShow-Sensor", {
 			this.sendSocketNotification('CONFIG_ULTRASONIC', this.config);
 			console.log("초음파 센서 사용할꺼야");
 		}
+
 	},
 
 	socketNotificationReceived: function (notification, payload) {
@@ -57,7 +62,7 @@ Module.register("MMM-HideAndShow-Sensor", {
 		if (notification === 'HIDE_ALL' && config.currentMode != "HIDE_ALL" ){
 			console.log("+++++++++++++++++++++++++++++++turn off");
 			config.bTurnOn = false;
-			config.iMotion = config.iMotionTime;
+			config.iSlideShowTime = config.localSlideShowTime;
 			MM.getModules().withClass(['newsfeed', 
                                       'weatherforecast', 
 									  'MMM-AirQuality',
@@ -78,7 +83,7 @@ Module.register("MMM-HideAndShow-Sensor", {
 			
 			console.log("+++++++++++++++++++++++++++++++show photo");
 			config.bTurnOn = true;
-			config.iMotion = config.iMotionTime;
+			config.iSlideShowTime = config.localSlideShowTime;
 			config.startedS1 = false;
 			config.currentMode = "SHOW_PHOTO"; 
 
@@ -110,7 +115,7 @@ Module.register("MMM-HideAndShow-Sensor", {
 		if (notification === "SHOW_MIRROR" && config.currentMode != "SHOW_MIRROR"){
 			console.log("+++++++++++++++++++++++++++++++show all and hide google photo");
 			config.bTurnOn = true;
-			config.iMotion = config.iMotionTime;
+			config.iSlideShowTime = config.localSlideShowTime;
 			MM.getModules().withClass(['newsfeed', 
                                       'weatherforecast', 
 									  'MMM-AirQuality',
