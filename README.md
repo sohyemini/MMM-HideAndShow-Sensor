@@ -1,6 +1,4 @@
-
 #MMM-HideAndShow-Sensor
-
 The purpose of this module are making show and hide other modules with sensor or toggle button. You can use motion sensor HC-SR501, Ultra sonic sensor HC-SR04 and toggle switch can be used with MagicMirror.
 The concept of this module assume that motion sensor is used always to detect person's movement, it there is no body all of module will be hided. and you can also use ultra sonic or toggle switch to change MagicMirror mode. because it has magicmirror mode and slideshow mode. if you have ultra sonic senor on it whenever something is within 1m, magicsensor will be changed mirror mode, if not It'll be changed to slideshow mode.
 And when you use toggle button each time when you press the button magicmirror mode will be changed between mirror mode and slideshow mode.
@@ -20,14 +18,14 @@ MMM-HideAndShow-Sensor.js에는 모든 서드파티 모듈들을 리스트 업�
 ## example of config
 edit your config.js
 
+		{
 			module: 'MMM-HideAndShow-Sensor',
 			config: {
-				pin: 23,                //SR04 Pin #
-				bShow: true,            //show all or not except 
-				echoPin: 24,            //SR501 echo pin #
-				triggerPin: 18,        //SR501 trigger Pin #
-				bMirror: false,         // Mirror mode
-				iMotion: 300,            //300sec
+				pin: 23,			// 모션센서 (항상 연결되어 있다는 가정)
+				echoPin: 24,			// 초음파센서 에코 핀 또는 스위치 GPIO 핀
+				triggerPin: 18,			// 초음파센서 트리거핀
+				iSlideShowTime: 75,		// 슬라이드쇼 시간, 단위 초
+				switch_on: false,		// 스위치를 사용하면 True, 초음파 센서를 이용하면 false	
 			}
-      
+		},
 
